@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>반남고분군 연계 관광지도</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+  <style>
+    body { margin: 0; font-family: 'Noto Sans KR', sans-serif; }
+    #map { height: 100vh; width: 100%; }
+    .filter-buttons {
+      position: absolute;
+      top: 10px;
+      left: 35px;
+      z-index: 1000;
+      background: rgba(255, 255, 255, 0.95);
+      padding: 12px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    .filter-buttons button {
+      margin: 4px 4px 4px 0;
+      padding: 6px 12px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background-color: #e0f7f7;
+      color: #006666;
+      font-weight: bold;
+    }
+    .filter-buttons button.active {
+      background-color: #009999;
+      color: white;
+    }
+    /* 모바일 반응형 스타일 */
+@media screen and (max-width: 768px) {
+  .filter-buttons {
+    top: 15px; /* 모바일에서 상단 여백을 줄임 */
+    left: 20px; /* 버튼을 왼쪽으로 약간 이동시켜 더 많은 공간 확보 */
+    padding: 10px;
+  }
+
+  .filter-buttons button {
+    padding: 8px 14px; /* 버튼 크기 조정 */
+    font-size: 14px; /* 모바일에서 글자 크기 조정 */
+    margin: 3px 3px 3px 0; /* 버튼 간격을 조금 더 좁혀서 공간 절약 */
+  }
+}
+    .leaflet-popup-content strong {
+      font-size: 15px;
+      color: #007070;
+    }
+    .popup-btn {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 5px 10px;
+      background-color: #00a3a3;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .language-switch {
+  position: fixed; /* 화면에 고정 */
+  top: 20px;        /* 상단에서 20px 아래 */
+  left: 50%;        /* 가운데 정렬을 위한 왼쪽 기준 */
+  transform: translateX(-50%); /* 정확한 가운데 위치 */
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  z-index: 1000;     /* 다른 요소 위에 보이게 설정 */
+}
+
+.language-switch button {
+  padding: 12px 20px;
+  font-size: 16px;
+  border: 2px solid #4CAF50;
+  border-radius: 30px;
+  background-color: white;
+  color: #4CAF50;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.language-switch button:hover {
+  background-color: #4CAF50;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+}
+
+.language-switch button:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+}
+  </style>
+</head>
+<body>
+   <div class="language-switch">
+     <button onclick="switchLanguage('ko')">한국어</button>
+     <button onclick="switchLanguage('en')">English</button>
+     <button onclick="switchLanguage('ja')">日本語</button>
+   </div>
+
+   <!-- <div id="location-desc"></div> -->
+
+<div class="filter-buttons">
+  <button data-type="전체" data-key="all" class="active">전체</button>
+  <button data-type="🏛️유적" data-key="heritage">유적</button>
+  <button data-type="🌿자연" data-key="nature">자연</button>
+  <button data-type="🚣체험" data-key="experience">체험</button>
+  <button data-type="🍽️먹거리" data-key="food">먹거리</button>
+  <button id="locateBtn" data-key="myLocation">📍 내 위치</button>
+</div>
+
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  const map = L.map('map').setView([35.0163, 126.7373], 12);
+
+  // 🔹 구글맵 스타일 타일 (Leaflet provider 예시 - OpenStreetMap 대신)
+  L.tileLayer('http://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    attribution: '© Google Maps',
+    maxZoom: 20
+  }).addTo(map);
+
+  const translations = {
+  ko: {
+    all: "전체",
+    heritage: "유적",
+    nature: "자연",
+    experience: "체험",
+    food: "먹거리",
+    myLocation: "📍 내 위치"
+  },
+  en: {
+    all: "All",
+    heritage: "Heritage",
+    nature: "Nature",
+    experience: "Experience",
+    food: "Food",
+    myLocation: "📍 My Location"
+  },
+  ja: {
+    all: "全体",
+    heritage: "遺跡",
+    nature: "自然",
+    experience: "体験",
+    food: "グルメ",
+    myLocation: "📍 現在地"
+  }
+};
+
+  const locations = [
+    {
+      name: {
+        ko: "반남고분군",
+        en: "Bannae Ancient Tombs",
+        ja: "潘南古墳群（はんなんこふんぐん）"
+      },
+      coords: [34.908213347799034,  126.64689865253011],
+      type: "🏛️유적",
+      desc: {
+        ko: "대표 고분군. 유적 탐방 및 해설 제공.",
+        en: "Representative tomb group of the Baekje era. Offers site tours and historical commentary.",
+        ja: "代表する古墳群。遺跡の探訪と解説を提供しています。"
+      },
+      link: "https://encykorea.aks.ac.kr/Article/E0070986"
+    },
+    {
+      name: {
+        ko: "국립나주박물관",
+        en: "National Naju Museum",
+        ja: "国立羅州博物館（こくりつらしゅうはくぶつかん）"
+      },
+      coords: [34.914603067926414, 126.6591273354268],
+      type: "🏛️유적",
+      desc: {
+      ko: "반남고분군 출토 유물 전시, 상설 전시관 운영.",
+      en: "Exhibits artifacts excavated from the Bannan tombs; operates a permanent exhibition hall.",
+      ja: "潘南古墳群から出土した遺物を展示、常設展示館を運営。"
+    },
+      link: "https://naju.museum.go.kr/"
+    },
+    {
+      name: {
+        ko: "반남고분군 관광안내소",
+        en: "Bannae Ancient Tombs Tourist Information Center",
+        ja: "潘南古墳群観光案内所（はんなんこふんぐんかんこうあんないしょ）"
+      },
+      coords: [34.91473096477891, 126.66134821849519],
+      type: "🏛️유적",
+      desc: {
+        ko: "나주시 반남면 고분로 756에 위치하며, 061-339-8592로 문의할 수 있습니다. 해당 안내소는 문화관광해설사 통합예약 서비스를 제공하며, 관련 정보는 나주시청 관광 홈페이지 (www.naju.go.kr/tour)에서 확인할 수 있습니다. ",
+        en: "Located at 756 Gobun-ro, Bannam-myeon, Naju-si. Inquiries can be made at 061-339-8592. The information center offers a unified reservation service for cultural tourism guides, and related information can be found on the Naju City Tourism website (www.naju.go.kr/tour).",
+        ja: "全羅南道羅州市潘南面古墳路756に位置し、お問い合わせは061-339-8592まで。案内所では文化観光解説士の統合予約サービスを提供しており、詳細は羅州市庁観光ホームページ（www.naju.go.kr/tour）をご覧ください。"
+      },
+      link: "https://www.google.com/search?q=%EB%B0%98%EB%82%A8%EA%B3%A0%EB%B6%84%EA%B5%B0+%EA%B4%80%EA%B4%91%EC%95%88%EB%82%B4%EC%86%8C&sca_esv=97acbeea5a2701d8&rlz=1C1GCEU_koKR1161KR1161&ei=erAgaM3KHtfH0-kP0aPXuQs&ved=0ahUKEwjN7-TmzJuNAxXX4zQHHdHRNbcQ4dUDCBA&uact=5&oq=%EB%B0%98%EB%82%A8%EA%B3%A0%EB%B6%84%EA%B5%B0+%EA%B4%80%EA%B4%91%EC%95%88%EB%82%B4%EC%86%8C&gs_lp=Egxnd3Mtd2l6LXNlcnAiH-uwmOuCqOqzoOu2hOq1sCDqtIDqtJHslYjrgrTshowyCxAAGIAEGLADGKIEMgsQABiABBiwAxiiBDILEAAYgAQYsAMYogQyCBAAGLADGO8FSOcLUPEGWLAJcAF4AJABAJgBwgKgAZQHqgEHMC4xLjIuMbgBA8gBAPgBAZgCA6ACoAPCAggQABiABBiiBJgDAOIDBRIBMSBAiAYBkAYEkgcFMS4xLjGgB6UKsgcFMC4xLjG4B5YDwgcDMi0zyAcV&sclient=gws-wiz-serp"
+    },
+    {
+      name: {
+        ko: "드들강 솔밭 유원지",
+        en: "Deudeul River Pine Forest Recreation Area",
+        ja: "トゥドゥル川松林遊園地（トゥドゥルがわしょうりんゆうえんち）"
+      },
+      coords: [35.018631317184,  126.85472924033022],
+      type: "🏛️유적",
+      desc: {
+        ko: "드들강 솔밭유원지는 도시와 아주 가까운 곳에 위치해 있으며, 청정자연 속에서 산책을 하기에도 아주 좋은 곳이다. 소나무들은 각자의 기품있는 모습으로 멋들어진 풍경을 만들고, 노송들의 아름다움이 마음속까지 차분하게 만들어준다.",
+        en: "Deuldeul River Pine Forest Park is located very close to the city, making it a great spot for walks in clean, natural surroundings. The pine trees, each with their own elegance, create a picturesque landscape, and the beauty of the old pines brings a sense of calm to the heart.",
+        ja: "ドゥルル川松林遊園地は都市に非常に近い場所に位置しており、清らかな自然の中で散歩をするのに最適な場所です。一本一本気品のある松が美しい風景を作り出し、老松の美しさは心を穏やかにしてくれます。"
+      },
+      link: "https://www.naju.go.kr/tour/sights/culture/recreation_area?idx=302&mode=view"
+    },
+    {
+      name: {
+        ko: "도래 전통 한옥마을",
+        en: "Dorae Traditional Hanok Village",
+        ja: "道来伝統韓屋村（どらいでんとうはんおくむら）"
+      },
+      coords: [34.99766816326467,  126.82301339968313],
+      type: "🏛️유적",
+      desc: {
+        ko: "도래마을 옛집'은 전남 나주 지역의 대표적 전통마을인 도래마을의 가장 중심에 자리잡은 근대 한옥입니다. 문화유산 보존기금으로 매입 후 2009년 개방하여, 현재 도래마을의 역사 및 문화와 함께 한옥의 아름다움을 체험할 수 있는 한옥숙박프로그램을 운영하고 있습니다.",
+        en: "The 'Old House of Dorae Village' is a modern hanok located at the heart of Dorae Village, a representative traditional village in Naju, Jeollanam-do. Purchased through a cultural heritage preservation fund and opened to the public in 2009, it now operates a hanok stay program where visitors can experience both the beauty of hanok and the history and culture of Dorae Village.",
+        ja: "『道来村の古家』は、全羅南道羅州市を代表する伝統的な村である道来村の中心に位置する近代韓屋です。文化遺産保存基金により購入され、2009年に一般公開されました。現在は道来村の歴史と文化、そして韓屋の美しさを体験できる宿泊プログラムを運営しています。"
+      },
+      link: "http://www.ntculture.or.kr/culturalHeritage/guide/view?id=471&page=1"
+    },
+    {
+      name: {
+        ko: "서성문(영금문)",
+        en: "Seoseongmun (Yeonggeummun Gate)",
+        ja: "西城門（永錦門）（せいじょうもん・えいきんもん）"
+      },
+      coords: [35.03285428435581,  126.71269059288436],
+      type: "🏛️유적",
+      desc: {
+        ko: "나주읍성의 서쪽에 위치한 서성문은 나주읍성 수성군과 동학군의 전투, 즉 우리 민쪽끼리의 전투 역사를 가진 슬픈 사연을 담고 있는 성문이다. 1894년 7월 1일 나주를 점령하기 위해 동학군이 서성문으로 내달렸으나 성은 함락되지 않았고, 이에 녹두장군 전봉준은 당시 나주목사 민종렬과 협의를 위해 나주읍성으로 들어가는데 그때 그 문이 서성문이다. 1815년에 발간된 ‘나주목여지승람’ 서문에 “영금운으로 기록된 편액이 있었다”는 기록에 따라 ‘영금문’ 현판을 제작하여 걸었다. 영금문은 ‘두루 나주를 비춘다’ 라는 뜻을 지닌 것으로 예상된다.",
+        en: "Seoseongmun, located on the west side of Naju Eupseong Fortress, bears a tragic history of a civil conflict between the defending Naju forces and the Donghak Peasant Army. On July 1, 1894, the Donghak Army charged toward Seoseongmun to take Naju, but the fortress was not breached. General Jeon Bong-jun later entered the fortress to negotiate with Naju’s magistrate Min Jong-ryeol — through this very gate. According to the 1815 publication 'Naju-mok Yeoji Seungnam', there was a plaque inscribed with ‘Yeonggeumun,’ which has been recreated. ‘Yeonggeumun’ is thought to mean 'the gate that shines over all of Naju'.",
+        ja: "羅州邑城の西側に位置する西城門（ソソンムン）は、羅州防衛軍と東学軍の戦い、すなわち民同士の戦争という悲しい歴史を抱える城門です。1894年7月1日、羅州を占領するために東学軍が西城門に突進しましたが、城は落ちませんでした。その後、緑豆将軍・全琫準（チョン・ボンジュン）が当時の羅州牧使・閔鍾烈（ミン・ジョンリョル）と協議するためにこの門から入城しました。1815年に発刊された『羅州牧輿地勝覧』の序文には「永金雲（ヨングムウン）」と記された扁額があったとされており、それに基づいて『永金門』という現代の扁額が制作され掛けられています。『永金門』は「羅州全体を照らす門」という意味と考えられています。"
+      },
+      link: "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=e931f8ce-c198-409a-9a87-6c0f1e18e215"
+    },
+    {
+      name: {
+        ko: "나주읍성",
+        en: "Naju Eupseong Fortress",
+        ja: "羅州邑城（らしゅうゆうせい）"
+      },
+      coords: [35.02939749368793,  126.72040082254068],
+      type: "🏛️유적",
+      desc: {
+        ko: "고려시대에 쌓은 성으로 조선 세조 3년(1457)에 성을 확장했고, 임진왜란(1592) 후에 대대적인 보수 공사가 있었다.",
+        en: "This fortress, built during the Goryeo Dynasty, was expanded in the 3rd year of King Sejo's reign (1457) and underwent major repairs after the Japanese invasions of 1592 (Imjin War).",
+        ja: "高麗時代に築かれたこの城は、朝鮮セジョ王3年（1457年）に拡張され、壬辰倭乱（1592年）の後に大規模な修復工事が行われました。"
+      },
+      link: "https://www.heritage.go.kr/heri/cul/culSelectDetail.do;jsessionid=2jwVJmPFIuKK5ntAlLMxYecxABdJTSfCwKDoD1TnipFOBaaf74oNpOfi3W1s14ai.cpawas2_servlet_engine1?culPageNo=24&region=&searchCondition=&searchCondition2=&s_kdcd=&s_ctcd=36&ccbaKdcd=13&ccbaAsno=03370000&ccbaCtcd=36&ccbaCpno=1333603370000&ccbaCndt=&ccbaLcto=&stCcbaAsno=&endCcbaAsno=&stCcbaAsdt=&endCcbaAsdt=&ccbaPcd1=&chGubun=&header=region&returnUrl=%2Fheri%2Fcul%2FculSelectRegionList.do&pageNo=1_1_3_1&sngl=Y"
+    },
+    {
+      name: {
+        ko: "나주 목사내아 금학헌",
+        en: "Naju Moksa House Geumhakheon",
+        ja: "羅州牧使内衙 錦鶴軒（らしゅうぼくしないが きんかくけん）"
+      },
+      coords: [35.03214387017268,  126.7153121754304],
+      type: "🏛️유적",
+      desc: {
+        ko: "오백 살도 넘은 팽나무가 지키고 서 있는 목사내아는 조선시대 나주목사의 살림집으로, 나주읍성 안에 있던 관아건축물 중 객사(客舍)인 금성관, 아문(衙門)인 정수루 등과 함께 지금까지 남아 있습니다. 건물은 일반적인 내아(內衙)의 양식에서 크게 벗어나지 않았으며, ㄷ자형으로 된 팔작지붕 구조입니다. 일제강점기부터 1980년대 후반까지 군수의 관사로 사용하면서 원래의 형태를 많이 잃어버렸으나, 최근 완전 해체ㆍ복원한 목사내아는 조선시대 관아 건축의 원형을 알 수 있는 중요한 자료로 평가받고 있습니다.",
+        en: "The Moksanae, guarded by a centuries-old hackberry tree, was the residence of the Naju magistrate during the Joseon Dynasty. It remains alongside other official buildings in Naju Eupseong, such as the guesthouse Geumseonggwan and the government office Jeongsuru. The building follows the general style of a typical government residence and has a 'ㄷ'-shaped, tiled roof structure. It was used as the governor’s residence from the Japanese colonial period until the late 1980s, losing much of its original form, but a recent full dismantling and restoration have made it an important source for understanding Joseon-era official architecture.",
+        ja: "500年以上の歳月を超えたポンナムが守っている目指内家（モクサネア）は、朝鮮時代の羅州牧使の住まいであり、羅州邑城内にある観察建築物の中でも金成館（ゲムソンガン）や行政機関の正水楼（ジョンスル）などとともに今も残っています。建物は一般的な内衙の様式から大きく外れることはなく、'ㄷ'字形の八角屋根構造をしています。日本の植民地時代から1980年代後半まで軍政府の官邸として使用され、元の形を多く失っていましたが、最近完全に解体・復元された目指内家は、朝鮮時代の官庁建築の原型を知るための貴重な資料として評価されています。"
+      },
+      link: "https://naju.go.kr/moksanaea"
+    },
+    {
+      name: {
+        ko: "나주 금성관",
+        en: "Naju Geumseonggwan Pavilion",
+        ja: "羅州錦城館（らしゅうきんじょうかん）"
+      },
+      coords: [35.03333887236889,   126.71656554482861],
+      type: "🏛️유적",
+      desc: {
+        ko: "나주 금성관은 조선 성종 6∼10년(1475∼1479) 사이에 나주목사 이유인이 세웠다. 일제시대에는 내부를 고쳐 청사로 사용했던 것을 1976년 원래 모습에 가깝게 복원하여 오늘에 이르고 있다.",
+        en: "Geumseonggwan in Naju was built by Naju magistrate Lee Yoo-in between the 6th and 10th years of King Seongjong’s reign (1475–1479). During the Japanese colonial period, it was renovated and used as an office building, but it was restored in 1976 to resemble its original appearance and remains as it is today.",
+        ja: "羅州金成館は朝鮮成宗6〜10年（1475〜1479年）に羅州牧使・イ・ユインによって建てられました。日本統治時代には内部が改修されて行政機関として使用されていましたが、1976年に元の姿に近い形に復元され、今日に至ります。"
+      },
+      link: "https://m.cha.go.kr/public/commentary/culSelectDetail.do;jsessionid=jQ9Lr9DUCan3haxZ5MGlfn2VptFekQcKh0EI8r5bn1VNiH6wyNxQxIj5S1K7wYhk.cha-was01_servlet_engine2?VdkVgwKey=21,00020000,36&pageNo=77010000"
+    },
+    {
+      name: {
+        ko: "덕룡산 불회사",
+        en: "Bulhoesa Temple on Deokryongsan Mountain",
+        ja: "徳龍山仏会寺（とくりゅうさんぶっかいじ）"
+      },
+      coords: [34.90870173860117, 126.8234698733996],
+      type: "🏛️유적",
+      desc: {
+        ko: "불회사라는 이름은 부처님의 회상이란 의미로, 불법승 삼보가 어우러져 부처님의 가르침이 끊이지 않는 장소라는 의미이다. 불회사는 단번에 눈에 들어오는 화려함은 없지만, 호젓한 분위기로 사람을 붙잡는다. 대웅전(국가 보물)과 명부전, 삼성각, 나한전, 요사채가 동백숲을 뒤에 두르고 가지런히 자리잡고 있으며 단풍이 가장 늦게 드는 지역으로 그 빛깔이 인근에서 가장 아름답다.",
+        en: "The name 'Bulhoesa' means 'a place where the Buddha’s teachings are ever-present,' with the Three Jewels of Buddhism — Buddha, Dharma, and Sangha — harmoniously combined. Bulhoesa may not immediately strike with opulence, but its serene atmosphere captivates visitors. The Daeungjeon (National Treasure), Myeongbujeon, Samsunggak, Nahanjeon, and the monk’s quarters are all arranged neatly, with a camellia forest behind them. It is known for being the last place to see autumn foliage, which is the most beautiful in the area.",
+        ja: "不会寺という名前は、仏陀の教えが絶え間なく存在する場所という意味で、仏法僧三宝が調和し、仏陀の教えが続く場所を意味します。不会寺は一目で華やかさを感じさせるわけではありませんが、その静かな雰囲気は人々を引き寄せます。大雄殿（国宝）や名部殿、三星閣、羅漢殿、僧侶の宿舎が椿の森を背に並んでおり、紅葉が最も遅く訪れる場所として、周辺で最も美しい色を誇ります。"
+      },
+      link: "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=6bf8ff13-2c2f-422a-9ed7-081dff3488ec"
+    },
+    {
+      name: {
+        ko: "나주곰탕거리",
+        en: "Naju Gomtang Street",
+        ja: "羅州コムタン通り（らしゅうこむたんどおり）"
+      },
+      coords: [35.03157110844273,   126.71707299862138],
+      type: "🍽️먹거리",
+      desc: {
+        ko: "100년 넘은 전통의 나주곰탕 맛집 거리.",
+        en: "A street famous for its traditional Naju Gomtang, with a history of over 100 years.",
+        ja: "100年以上の伝統を持つ羅州のコムタン名店街。"
+      },
+      link: "http://www.bbsj.kr/alley/alley_detail.php?aly_idx=80"
+    },
+    {
+      name: {
+        ko: "영산포 홍어거리",
+        en: "Yeongsanpo Hongeo Street",
+        ja: "栄山浦ホンオ通り（えいざんぽホンオどおり）"
+      },
+      coords: [34.99995606443717,   126.71070515197165],
+      type: "🍽️먹거리",
+      desc: {
+        ko: "영산포 홍어는 굽이굽이 영산강 뱃길을 따라 올라와 닻을 내리면 잡힌 홍어가 먼 뱃길을 따라 올라오는 사이에 자연 발효되어 독특하고 절묘한 맛을 내는 웰빙 식품이다. 옛 영산포구가 있던 자리에 40여 곳의 홍어 음식점과 도매상이 들어서 있어 홍어거리에 들어서면 퀴퀴한 홍어 냄새가 진동한다. 고려 말 흑산도를 비롯한 전라도 섬에는 왜구의 침입이 잦았다. 늘 생명의 위협을 받고 살던 섬주민들이 강을 따라 뭍으로 거슬러 왔는데, 그곳이 바로 나주의 영산포였다. 흑산도 주변 영산도에서 피신 온 사람들이 많아 마을 이름이 영산포가 되었다는 이야기가 전한다.",
+        en: "Yeongsanpo hongeo (skate) is a well-being food that undergoes natural fermentation as it travels up the winding Yeongsan River’s waterway. It develops a unique and exquisite flavor. In the area where the old Yeongsanpo port once stood, over 40 hongeo restaurants and wholesalers have gathered, and entering the hongeo street, you are greeted by the pungent smell of fermented skate. In the late Goryeo period, the islands of Jeolla-do, including Heuksando, often suffered pirate raids. The islanders, constantly under threat of death, migrated up the river to the land, and this area, now known as Yeongsanpo, became their refuge. The name 'Yeongsanpo' is said to have come from many people who sought shelter from Heuksando and Yeongsando.",
+        ja: "영山포홍어は、曲がりくねった영산川（ヨンサンガン）の水路を上って行く際に、自然発酵して独特で絶妙な味を生み出すウェルビーング食品です。昔の영산포（ヨンサンポ）港があった場所には、40軒以上の홍어（ホンオ）専門店と卸売業者が集まり、홍어通りに入ると腐敗した홍어の独特な匂いが立ち込めます。高麗末期、黒山島（ヘクサンド）をはじめとする全羅道の島々は、しばしば海賊の襲撃を受けていました。命の危険に晒されていた島民たちは川を遡り、陸地へと移住しました。その場所が現在の영산포であり、名前も黒山島周辺の영산도（ヨンサンド）から避難してきた人々によってつけられたと言われています。"
+      },
+      link: "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=4b555ea0-89c7-4656-9ce4-ab04137de0b3"
+    },
+    {
+      name: {
+        ko: "빛가람 호수공원",
+        en: "Bitgaram Lake Park",
+        ja: "ピッカラム湖水公園（ピッカラムこすいこうえん）"
+      },
+      coords: [35.01684494729625, 126.78910814716674],
+      type: "🌿자연",
+      desc: {
+        ko: "자전거길과 산책로가 있는 생태 관광지.",
+        en: "An eco-tourism site with bike paths and walking trails.",
+        ja: "自転車道と散策路のあるエコ観光地です。"
+      },
+      link: "https://www.naju.go.kr/tour/sights/nature/all?mode=view&idx=624"
+    },
+    {
+      name: {
+        ko: "느러지전망대",
+        en: "Neureoji Observatory",
+        ja: "ヌロジ展望台（ヌロジてんぼうだい）"
+      },
+      coords: [34.91593284753421, 126.5419655613512],
+      type: "🌿자연",
+      desc: {
+        ko: "나주의 느러지마을은 담양 용추봉에서 시작된 영산강이 목포 하구언으로 흘러나가기 전에 U자 모양으로 크게 굽이치는 곳에 자리하고 있다. 그 모습이 마치 한반도 지형과 닮았다고 하여 하나의 관광 명소가 되었다.",
+        en: "Neureoji Village in Naju is located at a wide U-shaped bend in the Yeongsan River, which starts from Yongchubong in Damyang and flows toward the Mokpo estuary. The bend resembles the shape of the Korean Peninsula, making it a unique tourist attraction.",
+        ja: "羅州のヌロジ村は、潭陽の龍秋峰から始まる栄山江が木浦河口堰に向かう前に大きくU字型に曲がる地点に位置しています。その形が朝鮮半島の地形に似ていることから、観光名所となりました。"
+      },
+      link: "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=89a5b9c9-c938-4408-ad19-08060e5d9086"
+    },
+    {
+      name: {
+        ko: "나주 영산포등대",
+        en: "Naju Yeongsanpo Lighthouse",
+        ja: "羅州栄山浦灯台（らしゅうえいざんぽとうだい）"
+      },
+      coords: [34.99967685815285, 126.70891237942017],
+      type: "🌿자연",
+      desc: {
+        ko: "한반도 서남부의 젖줄인 영산강은 한반도 고대 마한 문화가 잉태된 곳입니다. 이곳 영산포에 국내 유일하게 내륙 등대인 영산포 등대가 서 있습니다. ",
+        en: "The Yeongsan River, the lifeline of southwestern Korea, is where the ancient Mahan culture of the Korean Peninsula was born. Here in Yeongsanpo stands the only inland lighthouse in Korea — the Yeongsanpo Lighthouse.",
+        ja: "朝鮮半島南西部の生命線である栄山江は、古代馬韓文化が誕生した場所です。この栄山浦には、韓国内唯一の内陸灯台である栄山浦灯台が建っています。"
+      },
+      link: "https://blog.naver.com/hansaramu/223690963032"
+    },
+    {
+      name: {
+        ko: "우습제",
+        en: "Useupje Reservoir",
+        ja: "ウスプジェ貯水池（ウスプジェちょすいち）"
+      },
+      coords: [34.9411431472814, 126.57894459523827],
+      type: "🌿자연",
+      desc: {
+        ko: "우습제는 나주시 공산면 동촌리와 동강면 인동리에 걸쳐 있는 저수지이다. 국도23호선과 인접해 있어 찾아가기 쉽다. 우습제는 약 300년 전에 조성한 것으로 알려지는데 현재의 모습으로 재 축조된 것은 1943년이다. 주민들에게는 ‘소소리 방죽’이라는 이름으로 불리고 있는데, 제방에 소들을 맸던 데서 유래한다고 한다.",
+        en: "Useupje is a reservoir spanning Dongchon-ri in Gongsan-myeon and Indong-ri in Donggang-myeon, Naju. It is easily accessible, located near National Route 23. Believed to have been originally built about 300 years ago, it was reconstructed into its current form in 1943. Locals also call it 'Sosori Pond,' a name said to have originated from the custom of tying cattle to the embankment.",
+        ja: "ウスプジェは、羅州市公山面東村里と東江面仁同里にまたがる貯水池です。国道23号線の近くにあり、アクセスしやすい場所です。およそ300年前に造られたとされ、現在の形に再築されたのは1943年です。住民の間では『ソソリ防塁』とも呼ばれていますが、これはかつて堤防に牛をつないでいたことに由来すると言われています。"
+      },
+      link: "https://www.naju.go.kr/tour/sights/nature/all?idx=312&mode=view"
+    },
+    {
+      name: {
+        ko: "영산강둔치체육공원",
+        en: "Yeongsangang Riverside Sports Park",
+        ja: "栄山江河川敷体育公園（えいざんこうかせんじきたいいくこうえん）"
+      },
+      coords: [35.002415910638184, 126.70843710857373],
+      type: "🌿자연",
+      desc: {
+        ko: "영산강둔치체육공원은 나주시 영산포 일대를 아우르는 시민들의 쉼터이자 휴식처다.",
+        en: "Yeongsangang Riverside Sports Park is a recreational space and resting place for citizens, covering the Yeongsanpo area of Naju.",
+        ja: "栄山江河川敷体育公園は、羅州市栄山浦地域全体を包む市民の憩いと休息の場です。"
+      },
+      link: "https://korean.visitkorea.or.kr/detail/rem_detail.do?cotid=24deb21b-845c-4c0f-8269-17389510d551"
+    },
+    {
+      name: {
+        ko: "황포돛배 체험",
+        en: "Hwangpo Sailboat Experience",
+        ja: "黄布帆船体験（こうほはんせんたいけん）"
+      },
+      coords: [34.999817161529556, 126.70915835315623],
+      type: "🚣체험",
+      desc: {
+        ko: "전통 돛배 타고 영산강 유람 체험.",
+        en: "Experience a river tour on a traditional sailboat along the Yeongsan River.",
+        ja: "伝統的な帆掛け船に乗って栄山江を遊覧する体験です。"
+      },
+      link: "https://www.naju.go.kr/tour/recommend/experience/sailboat"
+    },
+    {
+      name: {
+        ko: "나주영상테마파크",
+        en: "Naju Image Theme Park",
+        ja: "羅州映像テーマパーク（らしゅうえいぞうテーマパーク）"
+      },
+      coords: [34.97759316344781, 126.60178036261965],
+      type: "🚣체험",
+      desc: {
+        ko: "나주영상테마파크는 주몽 촬영지로 유명해지기 시작해 삼한지테마파크로 문을 열었고 대규모 리모델링을 거치면서 현재의 '나주영상테마파크'라는 이름이 붙었다. 약 14만㎡로 국내 최대 규모로 그동안 약 100만 명 입장객이 다녀갔다. 공원 내부는 100여 채 건물이 각 테마별로 짜임새 있게 구성됐으며 궁궐의 웅장함도 으뜸이다.",
+        en: "Naju Image Theme Park, initially known as the filming site of 'Jumong', opened as Samhanji Theme Park and was later renamed after extensive remodeling. Covering about 140,000㎡, it is the largest of its kind in Korea and has welcomed over 1 million visitors. The park features over 100 buildings organized by theme, with the grandeur of palaces being especially impressive.",
+        ja: "羅州映像テーマパークは、ドラマ『朱蒙』の撮影地として有名になり、『三韓志テーマパーク』として開園した後、大規模なリモデリングを経て現在の『羅州映像テーマパーク』という名前になりました。約14万㎡の敷地で、韓国国内最大規模を誇り、これまでに約100万人の来場者が訪れました。園内にはテーマごとに構成された100棟以上の建物があり、宮殿の壮大さが際立っています。"
+      },
+      link: "https://korean.visitkorea.or.kr/detail/rem_detail.do?cotid=7126c9eb-4827-47a6-b34f-e63daf382df7"
+    },
+    {
+      name: {
+        ko: "나주목사고을시장",
+        en: "Naju Moksa Goeul Market",
+        ja: "羅州牧使古邑市場（らしゅうぼくしこゆういちば）"
+      },
+      coords: [35.0363005828805, 126.72370614382349],
+      type: "🚣체험",
+      desc: {
+        ko: "나주 시내에는 나주 읍내장의 명맥을 이은 성북시장과 옛 장터에 개설된 상설시장 금계매일시장이 있었는데, 도시의 복원 계획에 따라 두 시장이 통합되어 2012년에 나주목사고을시장으로 변모했다. 나주목사고을시장은 2013년에 문화관광형 시장으로 선정되었고 토요문화장터, 토요야시장 등을 통해 성공적인 전통시장으로 인정받고 있다.",
+        en: "In downtown Naju, Seongbuk Market, a continuation of the traditional town market, and Geumgye Daily Market, established on the old marketplace, were merged in 2012 under the city restoration plan to form the Naju Moksa Goeul Market. In 2013, it was designated a cultural tourism market and has since been recognized as a successful traditional market through events like the Saturday Cultural Market and Night Market.",
+        ja: "羅州市内には、伝統的な邑内場の系譜を継ぐ城北市場と旧市場跡に開設された金鷄毎日市場がありましたが、都市復元計画により2012年に統合され、『羅州牧使古邑市場』として生まれ変わりました。2013年には文化観光型市場に選定され、土曜文化市場や土曜夜市などを通じて成功した伝統市場として認められています。"
+      },
+      link: "https://korean.visitkorea.or.kr/detail/ms_detail.do?cotid=d53f8059-42e0-4cf3-a895-df902fd64f51"
+    },
+    {
+      name: {
+        ko: "한국천연염색박물관",
+        en: "Korea Natural Dyeing Museum",
+        ja: "韓国天然染色博物館（かんこくてんねんせんしょくはくぶつかん）"
+      },
+      coords: [34.99411335268722, 126.66285352434537],
+      type: "🚣체험",
+      desc: {
+        ko: "영산강 유역을 배경으로 천연염색과 직물 생산이 활발하게 이루어져 왔는데, 지형적 자연 환경이 쪽과 뽕나무를 재배하기에 적합한 여건을 갖추고 있기 때문이다. 이 지역은 민물과 바닷물이 합류하여 섞이는 곳으로 쪽 재배의 유리한 환경이 자연적으로 형성돼 천연염색 발달의 최적지였다. 이로 인해 천연염색의 전통이 현대까지 계승되어 전국에서 유일하게 국가중요무형문화재 제 115호 염색장이 활동하고 있는 곳이기도 하다.",
+        en: "Natural dyeing and textile production have flourished along the Yeongsan River basin due to the area's favorable environment for cultivating indigo plants and mulberries. As a place where fresh and saltwater meet, it naturally provided ideal conditions for indigo farming, making it the perfect region for developing traditional dyeing. As a result, the tradition continues today, and it is the only place in Korea where a National Intangible Cultural Heritage No. 115 dyer is active.",
+        ja: "栄山江流域では、地形的な自然環境が藍や桑の栽培に適しているため、天然染色と織物の生産が盛んに行われてきました。この地域は淡水と海水が交わる場所であり、藍の栽培に有利な自然環境が形成されており、天然染色の発展に最適な場所でした。そのため、天然染色の伝統が現代まで受け継がれ、韓国で唯一、国家重要無形文化財第115号の染色匠が活動する地域でもあります。"
+      },
+      link: "https://www.naturaldyeing.or.kr/"
+    },
+    {
+      name: {
+        ko: "나주배박물관",
+        en: "Naju Pear Museum",
+        ja: "羅州梨博物館（らしゅうなしはくぶつかん）"
+      },
+      coords: [35.03412872559633, 126.76686387351798],
+      type: "🚣체험",
+      desc: {
+        ko: "나주배는 1430년 세종실록지리지 나주목편에 토공물로 기록되어 품질의 우수성을 과시하였고, 옛날부터 많은 농가가 배를 재배하여 왔으며 1967년부터 세계 여러나라에 수출해오고 있다. 나주배박물관은 나주배를 널리 홍보하고, 재배역사, 민속자료 등을 수집 보존 전시하여 후손들의 산 교육장으로 활용코자 1992년 4월 20일 개관한 세계유일의 배전문 박물관이다.",
+        en: "Naju pears were recorded as tribute goods in the 1430 Sejong Sillok Jiriji for their superior quality. Pear farming has long been common in the area, and Naju pears have been exported to countries worldwide since 1967. The Naju Pear Museum, the only pear-dedicated museum in the world, opened on April 20, 1992, to promote Naju pears, preserve their cultivation history and folklore, and serve as an educational center for future generations.",
+        ja: "羅州梨は1430年の『世宗実録地理志』の羅州牧編に貢納品として記録され、その品質の優秀さを誇りました。古くから多くの農家が梨を栽培しており、1967年からは世界各国に輸出されています。羅州梨博物館は、羅州梨を広く広報し、その栽培の歴史や民俗資料を収集・保存・展示し、次世代の教育の場として活用するために1992年4月20日に開館した、世界唯一の梨専門博物館です。"
+      },
+      link: "https://www.culture.go.kr/space/facilityView.do?seq=413"
+    }
+  ];
+
+  let markers = [];
+  let currentLang = 'ko';  // ✅ 기본 언어 설정 (추가한 것)
+
+  function showMarkers(type) {
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
+
+    locations.forEach(loc => {
+      if (type === "전체" || loc.type === type) {
+        const marker = L.marker(loc.coords)
+        .bindPopup(`
+          <strong>${loc.type} ${loc.name[currentLang] || loc.name['ko']}</strong><br>
+          ${loc.desc[currentLang] || loc.desc['ko']}<br>
+          <a class="popup-btn" href="${loc.link}" target="_blank">상세보기</a>
+        `)
+          .addTo(map);
+        markers.push(marker);
+      }
+    });
+  }
+    // ✅ 언어 전환 함수 (추가한 것)
+  function switchLanguage(lang) {
+    currentLang = lang;
+    const activeType = document.querySelector('.filter-buttons button.active').getAttribute('data-type');
+    showMarkers(activeType);
+  }
+
+  function switchLanguage(lang) {
+  currentLang = lang;
+  showMarkers(document.querySelector('.filter-buttons .active')?.dataset.type || "전체");
+  updateButtonLabels();  // 버튼 텍스트도 변경
+}
+
+  showMarkers("전체");
+
+function showMarkers(type) {
+  markers.forEach(m => map.removeLayer(m));
+  markers = [];
+
+  locations.forEach(loc => {
+    if (type === "전체" || loc.type === type) {
+      const marker = L.marker(loc.coords)
+        .bindPopup(`
+          <strong>${loc.type} ${loc.name[currentLang] || loc.name['ko']}</strong><br>
+          ${loc.desc[currentLang] || loc.desc['ko']}<br>
+          <a class="popup-btn" href="${loc.link}" target="_blank">상세보기</a>
+        `)
+        .addTo(map);
+      markers.push(marker);
+    }
+  });
+}
+
+
+  document.querySelectorAll('.filter-buttons button[data-type]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.filter-buttons button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const type = btn.getAttribute('data-type');
+      showMarkers(type);
+    });
+  });
+
+  // 🔍 내 위치 찾기
+  document.getElementById('locateBtn').addEventListener('click', () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const you = L.circleMarker([lat, lng], {
+          radius: 8,
+          fillColor: '#00cccc',
+          color: '#008080',
+          weight: 2,
+          fillOpacity: 0.8
+        }).addTo(map).bindPopup("📍 내 위치").openPopup();
+        map.setView([lat, lng], 14);
+      }, () => {
+        alert('위치 접근을 허용해주세요.');
+      });
+    } else {
+      alert('이 브라우저는 위치 기능을 지원하지 않습니다.');
+    }
+  });
+
+  function updateButtonLabels() {
+  document.querySelectorAll('.filter-buttons button').forEach(btn => {
+    const key = btn.dataset.key;
+    if (translations[currentLang][key]) {
+      btn.textContent = translations[currentLang][key];
+    }
+  });
+}
+
+</script>
+</body>
+</html>

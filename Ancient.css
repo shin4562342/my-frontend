@@ -1,0 +1,445 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    font-family: sans-serif;
+    transition: background 1s;
+  }
+  
+.language-switch {
+  position: fixed; /* 화면에 고정 */
+  top: 20px;        /* 상단에서 20px 아래 */
+  left: 50%;        /* 가운데 정렬을 위한 왼쪽 기준 */
+  transform: translateX(-50%); /* 정확한 가운데 위치 */
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  z-index: 1000;     /* 다른 요소 위에 보이게 설정 */
+}
+
+.language-switch button {
+  padding: 12px 20px;
+  font-size: 16px;
+  border: 2px solid #4CAF50;
+  border-radius: 30px;
+  background-color: white;
+  color: #4CAF50;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.language-switch button:hover {
+  background-color: #4CAF50;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 10px rgba(0,0,0,0.15);
+}
+
+.language-switch button:active {
+  transform: translateY(0);
+  box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+}
+
+  body.day {
+    background: linear-gradient(to bottom, #7ec8e3 0%, #a8e6a1 40%, #2e8b57 80%, #2e8b57 100%);
+  }
+  
+  body.night {
+    background: linear-gradient(to bottom, #0b0c2a 0%, #1b3b6f 40%, #0b3d0b 80%, #0b3d0b 100%);
+  }
+  
+  .theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    z-index: 100;
+    cursor: pointer;
+    border: none;
+    border-radius: 20px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    transition: background 0.3s;
+  }
+  
+  .sky {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .sun {
+  position: absolute;
+  top: 10%;
+  left: 70%;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle, #FFD700 40%, #FFA500 80%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 30px 15px rgba(255, 223, 0, 0.5),
+    0 0 60px 30px rgba(255, 200, 0, 0.3);
+  opacity: 0;
+  transition: opacity 1s, transform 1s;
+  z-index: 2;
+}
+
+body.day .sun {
+  opacity: 1;
+}
+
+.moon {
+  position: absolute;
+  top: 15%;
+  left: 75%;
+  width: 100px;
+  height: 100px;
+  background: radial-gradient(circle at 30% 30%, #f0e9c3 60%, #d9d2a3 100%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 20px 10px rgba(240, 233, 195, 0.3),
+    inset -5px -5px 10px rgba(0, 0, 0, 0.2);
+  opacity: 0;
+  transition: opacity 1s, transform 1s;
+  z-index: 2;
+}
+
+body.night .moon {
+  opacity: 1;
+}
+  /* .cloud {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    opacity: 0.8;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  }
+  
+  .cloud1 { width: 160px; height: 80px; top: 10%; }
+  .cloud2 { width: 130px; height: 65px; top: 20%; }
+  .cloud3 { width: 190px; height: 95px; top: 30%; } */
+
+  .cloud {
+  position: absolute;
+  background: transparent;
+  opacity: 0.85;
+  animation: floatCloud 60s linear infinite;
+}
+
+.puff {
+  position: absolute;
+  background: white;
+  border-radius: 50%;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.cloud1 {
+  top: 10%;
+  left: 15%;
+  width: 160px;
+  height: 80px;
+}
+
+.cloud1 .puff1 {
+  width: 60px; height: 60px; left: 0; top: 10px;
+}
+.cloud1 .puff2 {
+  width: 80px; height: 80px; left: 40px; top: 0;
+}
+.cloud1 .puff3 {
+  width: 60px; height: 60px; left: 90px; top: 15px;
+}
+.cloud2 {
+  top: 20%;
+  left: 40%;
+  width: 200px;
+  height: 90px;
+}
+
+.cloud2 .puff1 {
+  width: 50px; height: 50px; left: 0; top: 20px;
+}
+.cloud2 .puff2 {
+  width: 70px; height: 70px; left: 40px; top: 5px;
+}
+.cloud2 .puff3 {
+  width: 70px; height: 70px; left: 90px; top: 15px;
+}
+.cloud2 .puff4 {
+  width: 50px; height: 50px; left: 140px; top: 25px;
+}
+.cloud3 {
+  top: 30%;
+  left: 60%;
+  width: 150px;
+  height: 70px;
+}
+
+.cloud3 .puff1 {
+  width: 50px; height: 50px; left: 0; top: 10px;
+}
+.cloud3 .puff2 {
+  width: 70px; height: 70px; left: 35px; top: 0;
+}
+.cloud3 .puff3 {
+  width: 50px; height: 50px; left: 85px; top: 12px;
+}
+  
+  .stars {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    background-image: radial-gradient(white 1px, transparent 1px),
+    radial-gradient(white 1px, transparent 1px),
+    radial-gradient(white 2px, transparent 2px);
+    background-size: 200px 200px, 250px 250px, 300px 300px;
+    background-position: 0 0, 50px 30px, 100px 80px;
+    opacity: 0;
+    transition: opacity 1s;
+  }
+  
+  body.night .stars {
+    opacity: 1;
+  }
+  
+  /* .hill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 30vh;
+    background: #2e8b57;
+    border-top-left-radius: 50% 20%;
+    border-top-right-radius: 50% 20%;
+  } */
+  
+  .hill {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    height: 30vh;
+    background: #2e8b57;
+    border-top-left-radius: 50% 20%;
+    border-top-right-radius: 50% 20%;
+}
+
+  .tomb {
+    position: fixed;
+    bottom: 30vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 100px;
+    background: #5c8b57;
+    border-top-left-radius: 90px 100px;
+    border-top-right-radius: 90px 100px;
+    border: 3px solid #3e6b3e;
+    box-shadow: inset 0 -10px 15px rgba(0,0,0,0.3);
+  }
+
+  /* 낮에는 기본 자연스러운 모습 (별다른 효과 X) */
+body.day .tomb {
+    background: #5c8b57;
+    border: 2px solid #3e6b3e;
+    box-shadow: inset 0 -10px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  /* 밤에는 조명 효과 (빛나는 테두리) */
+body.night .tomb {
+    border-color: #b5f3ff;
+    box-shadow:
+      0 0 15px 5px rgba(181, 243, 255, 0.6),
+      inset 0 -10px 15px rgba(0, 0, 0, 0.3);
+  }
+  
+  .tomb::after {
+    content: "";
+    position: fixed;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    height: 20px;
+    background: radial-gradient(circle at 10px 10px, #777 3px, transparent 0),
+                radial-gradient(circle at 40px 10px, #666 4px, transparent 0),
+                radial-gradient(circle at 80px 10px, #888 5px, transparent 0),
+                radial-gradient(circle at 120px 10px, #555 3px, transparent 0);
+    background-size: 100% 100%;
+  }  
+  
+  .tomb-stone {
+    position: fixed;
+    bottom: 10%;
+    left: 70%;
+    width: 10px;
+    height: 30px;
+    background: #6b6b6b;
+    border: 1px solid #444;
+    border-radius: 2px;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+  }
+
+    .tomb2 {
+    position: fixed;
+    bottom: 25vh;
+    left: 30%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 100px;
+    background: #5c8b57;
+    border-top-left-radius: 90px 100px;
+    border-top-right-radius: 90px 100px;
+    border: 3px solid #3e6b3e;
+    box-shadow: inset 0 -10px 15px rgba(0,0,0,0.3);
+  }
+
+  body.day .tomb2 {
+    background: #5c8b57;
+    border: 2px solid #3e6b3e;
+    box-shadow: inset 0 -10px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  body.night .tomb2 {
+    border-color: #b5f3ff;
+    box-shadow:
+      0 0 15px 5px rgba(181, 243, 255, 0.6),
+      inset 0 -10px 15px rgba(0, 0, 0, 0.3);
+  }
+
+    .tomb2::after {
+    content: "";
+    position: fixed;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    height: 20px;
+    background: radial-gradient(circle at 10px 10px, #777 3px, transparent 0),
+                radial-gradient(circle at 40px 10px, #666 4px, transparent 0),
+                radial-gradient(circle at 80px 10px, #888 5px, transparent 0),
+                radial-gradient(circle at 120px 10px, #555 3px, transparent 0);
+    background-size: 100% 100%;
+  }  
+  
+  .tomb2-stone2 {
+    position: fixed;
+    bottom: 10%;
+    left: 70%;
+    width: 10px;
+    height: 30px;
+    background: #6b6b6b;
+    border: 1px solid #444;
+    border-radius: 2px;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+  }
+
+      .tomb3 {
+    position: fixed;
+    bottom: 15vh;
+    left: 75%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 100px;
+    background: #5c8b57;
+    border-top-left-radius: 90px 100px;
+    border-top-right-radius: 90px 100px;
+    border: 3px solid #3e6b3e;
+    box-shadow: inset 0 -10px 15px rgba(0,0,0,0.3);
+  }
+
+  body.day .tomb3 {
+    background: #5c8b57;
+    border: 2px solid #3e6b3e;
+    box-shadow: inset 0 -10px 15px rgba(0, 0, 0, 0.3);
+  }
+
+  body.night .tomb3 {
+    border-color: #b5f3ff;
+    box-shadow:
+      0 0 15px 5px rgba(181, 243, 255, 0.6),
+      inset 0 -10px 15px rgba(0, 0, 0, 0.3);
+  }
+
+    .tomb3::after {
+    content: "";
+    position: fixed;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 160px;
+    height: 20px;
+    background: radial-gradient(circle at 10px 10px, #777 3px, transparent 0),
+                radial-gradient(circle at 40px 10px, #666 4px, transparent 0),
+                radial-gradient(circle at 80px 10px, #888 5px, transparent 0),
+                radial-gradient(circle at 120px 10px, #555 3px, transparent 0);
+    background-size: 100% 100%;
+  }  
+  
+  .tomb3-stone3 {
+    position: fixed;
+    bottom: 10%;
+    left: 70%;
+    width: 10px;
+    height: 30px;
+    background: #6b6b6b;
+    border: 1px solid #444;
+    border-radius: 2px;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+  }
+  
+  .content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    color: white;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    z-index: 20;
+  }
+  
+  .sections {
+    padding: 50px 20px;
+    position: relative;
+  }
+  
+  .fade-section {
+    width: 45%;
+    opacity: 0;
+    transform: translateY(50px);
+    transition: opacity 1s ease-out, transform 1s ease-out;
+    margin: 200px 0;
+    padding: 150px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    font-size: 1.2rem;
+    position: relative;
+  }
+  
+  .left {
+    margin-left: 0;
+    margin-right: auto;
+  }
+  
+  .right {
+    margin-left: auto;
+    margin-right: 0;
+  }
+  
+  .fade-section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .fade-section.hidden {
+    opacity: 0;
+    transform: translateY(50px);
+  }
+  @media (max-width: 768px) {
+  .info-grid {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
